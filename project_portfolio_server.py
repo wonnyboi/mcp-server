@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 import sqlite3
 from mcp.server.fastmcp import FastMCP
@@ -9,6 +9,12 @@ import re
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+import markdown
+import jinja2
+import yaml
+import base64
+from fastapi import FastAPI, Response
+from fastapi.responses import JSONResponse
 
 # 환경 변수 로드
 load_dotenv()
@@ -44,6 +50,9 @@ class Project(BaseModel):
 
 # MCP 서버 인스턴스 생성
 mcp = FastMCP("SSAFY Project Portfolio Server")
+
+# FastAPI 앱 생성
+app = FastAPI()
 
 def load_template() -> dict:
     """Load the project information template."""
@@ -589,5 +598,181 @@ def get_project_info(project_id: int) -> str:
     except Exception as e:
         return f"프로젝트 정보 조회 중 오류 발생: {str(e)}"
 
+@mcp.tool()
+def analyze_github_repo(github_url: str) -> Dict[str, Any]:
+    """GitHub 레포지토리를 분석하여 프로젝트 정보를 추출합니다."""
+    try:
+        # GitHub URL에서 owner와 repo 추출
+        match = re.match(r'https://github.com/([^/]+)/([^/]+)', github_url)
+        if not match:
+            return {"error": "Invalid GitHub URL"}
+        
+        owner, repo_name = match.groups()
+        repo = github.get_repo(f"{owner}/{repo_name}")
+        
+        # 기본 정보 추출
+        project_info = {
+            "title": repo.name,
+            "description": repo.description,
+            "github_url": github_url,
+            "tech_stack": extract_tech_stack(repo),
+            "key_features": [],
+            "challenges": [],
+            "solutions": []
+        }
+        
+        # README 분석
+        try:
+            readme = repo.get_readme()
+            content = base64.b64decode(readme.content).decode('utf-8')
+            project_info.update(analyze_readme(content))
+        except:
+            pass
+        
+        # 이슈 분석
+        issues = repo.get_issues(state='all')
+        for issue in issues:
+            if "feature" in issue.title.lower() or "기능" in issue.title:
+                project_info["key_features"].append(issue.title)
+            elif "challenge" in issue.title.lower() or "문제" in issue.title:
+                project_info["challenges"].append(issue.title)
+                if issue.body:
+                    project_info["solutions"].append(issue.body)
+        
+        return project_info
+    except Exception as e:
+        return {"error": str(e)}
+
+@mcp.tool()
+def generate_portfolio(project_id: int, format: str = "markdown") -> str:
+    """프로젝트 정보를 기반으로 포트폴리오를 생성합니다."""
+    project_info = get_project_info(project_id)
+    if not project_info:
+        return "Project not found"
+    
+    if format == "markdown":
+        template = """
+# {{ project.title }}
+
+## 프로젝트 개요
+{{ project.description }}
+
+## 기술 스택
+{% for tech in project.tech_stack %}
+- {{ tech }}
+{% endfor %}
+
+## 주요 기능
+{% for feature in project.key_features %}
+- {{ feature }}
+{% endfor %}
+
+## 도전 과제와 해결 방법
+{% for challenge, solution in zip(project.challenges, project.solutions) %}
+### {{ challenge }}
+{{ solution }}
+{% endfor %}
+
+## 팀 구성
+{% for member in project.members %}
+### {{ member.name }} ({{ member.role }})
+{% for contribution in member.contributions %}
+- {{ contribution }}
+{% endfor %}
+{% endfor %}
+"""
+        env = jinja2.Environment()
+        template = env.from_string(template)
+        return template.render(project=project_info)
+    
+    return "Unsupported format"
+
+@mcp.tool()
+def conduct_project_interview(project_id: int) -> Dict[str, Any]:
+    """프로젝트에 대한 사용자 인터뷰를 진행합니다."""
+    project_info = get_project_info(project_id)
+    if not project_info:
+        return {"error": "Project not found"}
+    
+    interview_questions = [
+        {
+            "question": "프로젝트에서 가장 큰 도전 과제는 무엇이었나요?",
+            "field": "challenges"
+        },
+        {
+            "question": "그 도전 과제를 어떻게 해결하셨나요?",
+            "field": "solutions"
+        },
+        {
+            "question": "프로젝트에서 본인의 주요 기여는 무엇인가요?",
+            "field": "contributions"
+        }
+    ]
+    
+    return {
+        "project_info": project_info,
+        "questions": interview_questions
+    }
+
+@mcp.tool()
+def generate_resume_section(project_id: int, section_type: str) -> str:
+    """프로젝트 정보를 기반으로 자소서 섹션을 생성합니다."""
+    project_info = get_project_info(project_id)
+    if not project_info:
+        return "Project not found"
+    
+    templates = {
+        "motivation": """
+프로젝트 동기:
+{{ project.description }}
+
+이 프로젝트를 통해 {{ project.tech_stack|join(', ') }} 등의 기술을 활용하여 
+{{ project.key_features|join(', ') }}와 같은 기능을 구현하고자 했습니다.
+""",
+        "contribution": """
+주요 기여:
+{% for member in project.members %}
+{% if member.role == 'lead' or member.role == 'developer' %}
+- {{ member.name }}님은 {{ member.contributions|join(', ') }}를 담당했습니다.
+{% endif %}
+{% endfor %}
+""",
+        "challenge": """
+도전과 극복:
+{% for challenge, solution in zip(project.challenges, project.solutions) %}
+{{ challenge }}라는 문제에 직면했을 때, {{ solution }}라는 해결책을 제시했습니다.
+{% endfor %}
+"""
+    }
+    
+    if section_type not in templates:
+        return "Unsupported section type"
+    
+    env = jinja2.Environment()
+    template = env.from_string(templates[section_type])
+    return template.render(project=project_info)
+
+@app.get("/health")
+async def health_check():
+    """서버 상태 확인을 위한 health check 엔드포인트"""
+    try:
+        # 데이터베이스 연결 확인
+        conn = sqlite3.connect('portfolio.db')
+        conn.close()
+        
+        # GitHub API 연결 확인
+        github.get_user()
+        
+        return JSONResponse(
+            status_code=200,
+            content={"status": "healthy", "timestamp": datetime.now().isoformat()}
+        )
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"status": "unhealthy", "error": str(e)}
+        )
+
 if __name__ == "__main__":
-    print("SSAFY Project Portfolio Server is running!") 
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000) 

@@ -1,0 +1,78 @@
+name: project-portfolio-server
+version: 1.0.0
+description: A MCP server for managing and generating project portfolios from GitHub repositories
+
+# MCP 서버 설정
+mcp:
+  name: "Project Portfolio Server"
+  description: "GitHub repository analysis and portfolio generation service"
+  version: "1.0.0"
+  tools:
+    - name: analyze_github_repo
+      description: "Analyze GitHub repository and extract project information"
+      inputSchema:
+        type: object
+        properties:
+          github_url:
+            type: string
+            description: "GitHub repository URL"
+        required: ["github_url"]
+
+    - name: generate_portfolio
+      description: "Generate portfolio from project information"
+      inputSchema:
+        type: object
+        properties:
+          project_id:
+            type: integer
+            description: "Project ID"
+          format:
+            type: string
+            description: "Output format (markdown)"
+            default: "markdown"
+        required: ["project_id"]
+
+    - name: conduct_project_interview
+      description: "Conduct project interview to gather additional information"
+      inputSchema:
+        type: object
+        properties:
+          project_id:
+            type: integer
+            description: "Project ID"
+        required: ["project_id"]
+
+    - name: generate_resume_section
+      description: "Generate resume section from project information"
+      inputSchema:
+        type: object
+        properties:
+          project_id:
+            type: integer
+            description: "Project ID"
+          section_type:
+            type: string
+            description: "Section type (motivation/contribution/challenge)"
+            enum: ["motivation", "contribution", "challenge"]
+        required: ["project_id", "section_type"]
+
+# 환경 변수 설정
+env:
+  - name: GITHUB_TOKEN
+    description: "GitHub API token"
+    required: true
+
+# 데이터베이스 설정
+database:
+  type: sqlite
+  path: portfolio.db
+
+# 배포 설정
+deploy:
+  type: docker
+  port: 8000
+  healthcheck:
+    path: /health
+    interval: 30s
+    timeout: 5s
+    retries: 3
