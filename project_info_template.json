@@ -1,0 +1,58 @@
+{
+    "projectInfo": {
+        "basicInfo": {
+            "projectName": "",
+            "duration": "",
+            "teamSize": "",
+            "yourRole": "",
+            "mainObjectives": []
+        },
+        "technicalInfo": {
+            "frontendTech": [],
+            "backendTech": [],
+            "database": [],
+            "deployment": [],
+            "otherTools": []
+        },
+        "architectureInfo": {
+            "currentStructure": "",
+            "painPoints": [],
+            "desiredImprovements": []
+        },
+        "codeQualityIssues": {
+            "debugCode": [],
+            "duplications": [],
+            "performance": [],
+            "readability": []
+        },
+        "portfolioGoals": {
+            "targetAudience": "",
+            "keyHighlights": [],
+            "personalContributions": [],
+            "uniqueSellingPoints": []
+        },
+        "githubInfo": {
+            "repositoryUrl": "",
+            "branchStructure": "",
+            "contributionStats": ""
+        }
+    },
+    "refactoringStatus": {
+        "completedTasks": [],
+        "pendingTasks": [],
+        "skippedTasks": []
+    },
+    "documentationStatus": {
+        "readmeGenerated": false,
+        "readmePath": "",
+        "additionalDocs": []
+    },
+    "portfolioOptimization": {
+        "recommendations": [],
+        "implementedSuggestions": []
+    },
+    "timestamp": {
+        "created": "",
+        "lastUpdated": ""
+    }
+} 
