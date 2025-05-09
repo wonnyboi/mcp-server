@@ -30,7 +30,7 @@ SSAFY 학생들을 위한 프로젝트 포트폴리오 및 면접 준비 도우�
 1. 저장소 클론
 
 ```bash
-git clone https://github.com/your-username/mcp-server.git
+git clone https://github.com/wonnyboi/mcp-server.git
 cd mcp-server
 ```
 
@@ -118,6 +118,6 @@ mcp-server/
 
 ## 연락처
 
-프로젝트 관리자 - [@your-username](https://github.com/your-username)
+프로젝트 관리자 - [@wonnyboi](https://github.com/wonnyboi)
 
-프로젝트 링크: [https://github.com/your-username/mcp-server](https://github.com/your-username/mcp-server)
+프로젝트 링크: [https://github.com/wonnyboi/mcp-server](https://github.com/wonnyboi/mcp-server)
